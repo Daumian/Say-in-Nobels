@@ -22,25 +22,6 @@
   const ANCHO = 260;
   const MAX_LINEAS_BLOQUE = 8;
 
-  function altoDe(n) {
-    switch (n.tipo) {
-      case 'inicio':
-        return 44;
-      case 'opcion':
-        return n.condicion ? 74 : 54;
-      case 'accion':
-        return 50;
-      case 'falta':
-        return 58;
-      case 'bloque': {
-        const visibles = Math.min(n.lineas.length, MAX_LINEAS_BLOQUE);
-        return 18 + visibles * 21 + (n.lineas.length > visibles ? 18 : 0) + (n.extras.length ? 24 : 0);
-      }
-      default:
-        return n.extras.length ? 92 : 72;
-    }
-  }
-
   const el = (ns, tag, attrs, padre) => {
     const e = document.createElementNS(ns, tag);
     if (attrs) for (const k in attrs) e.setAttribute(k, attrs[k]);
@@ -60,6 +41,7 @@
       this.alSeleccionar = (opciones && opciones.alSeleccionar) || (() => {});
       this.vista = { x: 40, y: 40, k: 1 };
       this.seleccion = null;
+      this.completo = false; // false = texto recortado en una línea; true = texto completo en columna
 
       const defs = el(SVG, 'defs', null, svg);
       const flecha = el(SVG, 'marker', { id: 'flecha', viewBox: '0 0 10 10', refX: '9', refY: '5', markerWidth: '7', markerHeight: '7', orient: 'auto-start-reverse' }, defs);
@@ -77,7 +59,21 @@
 
     dibujar(grafo) {
       this.grafo = grafo;
-      const res = raiz.Ubicar.ubicar(grafo, { ancho: ANCHO, altoDe, sepX: 70, sepY: 22 });
+      this.svg.classList.toggle('completo', this.completo);
+
+      // Armamos todas las cajas en un lugar invisible para medir cuánto mide cada una
+      const medidor = div('nube-medidor' + (this.completo ? ' completo' : ''), null, document.body);
+      const cajas = new Map();
+      for (const n of grafo.nodos) {
+        const lugar = div('nube-medidor-lugar', null, medidor);
+        lugar.style.width = ANCHO + 'px';
+        cajas.set(n.id, this._crearCaja(n, lugar));
+      }
+      const altos = new Map();
+      for (const [id, caja] of cajas) altos.set(id, Math.ceil(caja.getBoundingClientRect().height));
+      medidor.remove();
+
+      const res = raiz.Ubicar.ubicar(grafo, { ancho: ANCHO, altoDe: (n) => altos.get(n.id), sepX: 70, sepY: 22 });
       this.pos = res.pos;
       this.tam = { ancho: res.ancho, alto: res.alto };
       this.capaAristas.textContent = '';
@@ -94,7 +90,18 @@
           this._arista(n, s, p, q, vuelve);
         });
       }
-      for (const n of grafo.nodos) this._nodo(n, this.pos.get(n.id));
+      for (const n of grafo.nodos) {
+        const p = this.pos.get(n.id);
+        const fo = el(SVG, 'foreignObject', { x: p.x, y: p.y, width: p.w, height: p.h, class: 'fo' }, this.capaNodos);
+        const caja = cajas.get(n.id);
+        fo.appendChild(caja);
+        caja.addEventListener('click', (ev) => {
+          if (this._arrastro) return;
+          ev.stopPropagation();
+          this.seleccionar(n.id, false);
+        });
+        this.elNodos.set(n.id, caja);
+      }
 
       if (this.seleccion && !grafo.porId.has(this.seleccion)) this.seleccion = null;
       this._marcarSeleccion();
@@ -132,9 +139,8 @@
       this.elAristas.push({ g, de: origen.id, a: s.a });
     }
 
-    _nodo(n, p) {
-      const fo = el(SVG, 'foreignObject', { x: p.x, y: p.y, width: p.w, height: p.h, class: 'fo' }, this.capaNodos);
-      const caja = div('nodo tipo-' + n.tipo, null, fo);
+    _crearCaja(n, padre) {
+      const caja = div('nodo tipo-' + n.tipo, null, padre);
       caja.style.setProperty('--color', n.color);
       caja.dataset.id = n.id;
 
@@ -158,7 +164,8 @@
         div('texto una-linea', n.texto, cuerpo);
       } else if (n.tipo === 'bloque') {
         const cuerpo = div('cuerpo', null, caja);
-        n.lineas.slice(0, MAX_LINEAS_BLOQUE).forEach((l) => {
+        const tope = this.completo ? n.lineas.length : MAX_LINEAS_BLOQUE;
+        n.lineas.slice(0, tope).forEach((l) => {
           const fila = div('linea-bloque', null, cuerpo);
           const punto = div('punto', null, fila);
           punto.style.background = l.color;
@@ -169,7 +176,7 @@
           }
           t.appendChild(document.createTextNode(l.texto));
         });
-        if (n.lineas.length > MAX_LINEAS_BLOQUE) div('mas', '+ ' + (n.lineas.length - MAX_LINEAS_BLOQUE) + ' líneas más', cuerpo);
+        if (n.lineas.length > tope) div('mas', '+ ' + (n.lineas.length - tope) + ' líneas más', cuerpo);
         if (n.extras.length) this._extras(n, cuerpo);
       } else {
         div('cuadro', inicial(n.personaje), caja);
@@ -183,12 +190,7 @@
         const fin = div('fin', '🏁', caja);
         fin.title = 'Final';
       }
-      caja.addEventListener('click', (ev) => {
-        if (this._arrastro) return;
-        ev.stopPropagation();
-        this.seleccionar(n.id, false);
-      });
-      this.elNodos.set(n.id, caja);
+      return caja;
     }
 
     _extras(n, padre, largo) {

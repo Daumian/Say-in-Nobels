@@ -6,9 +6,8 @@
 
   const $ = (s) => document.querySelector(s);
   const texto = $('#texto');
-  const selFormato = $('#formato');
-  const selEjemplo = $('#ejemplo');
   const chkAgrupar = $('#agrupar');
+  const btnRecortar = $('#btn-recortar');
   const editor = $('#editor');
   const btnEditor = $('#btn-editor');
   const detalle = $('#detalle');
@@ -29,21 +28,15 @@
   let grafoBase = null;
   let grafo = null;
   let primeraVez = true;
+  let archivo = null; // { nombre, formato }
 
   // ------------------------------------------------------------ generar
 
-  function detectarFormato(t) {
-    if (selFormato.value !== 'auto') return selFormato.value;
-    const esRenpy = window.LectorRenpy.pareceRenpy(t);
-    const esInk = window.LectorInk.pareceInk(t);
-    if (esInk && !esRenpy) return 'ink';
-    return 'renpy';
-  }
-
   function generar(reencuadrar) {
+    if (!archivo) return;
     const t = texto.value;
-    const formato = detectarFormato(t);
-    $('#formato-detectado').textContent = NOMBRE_FORMATO[formato] + (selFormato.value === 'auto' ? ' (auto)' : '');
+    const formato = archivo.formato;
+    $('#formato-detectado').textContent = NOMBRE_FORMATO[formato];
     $('#vacio').hidden = !!t.trim();
 
     try {
@@ -294,14 +287,91 @@
     texto.scrollTop = Math.max(0, (linea - 6) * alto);
   }
 
-  function cargar(contenido, formato) {
+  // ------------------------------------------------- portada y archivos
+
+  const FORMATO_POR_EXTENSION = { rpy: 'renpy', ink: 'ink' };
+
+  function avisar(mensaje) {
+    const m = $('#mensaje');
+    m.textContent = mensaje;
+    m.hidden = false;
+    clearTimeout(avisar.t);
+    avisar.t = setTimeout(() => (m.hidden = true), 5000);
+  }
+
+  function mostrarPortada() {
+    $('#visor').hidden = true;
+    $('#portada').hidden = false;
+    const guardado = leerGuardado();
+    const seguir = $('#btn-seguir');
+    seguir.hidden = !guardado;
+    if (guardado) seguir.textContent = '↩ Seguir con «' + guardado.nombre + '»';
+    $('#btn-abrir').focus();
+  }
+
+  function mostrarVisor() {
+    $('#portada').hidden = true;
+    $('#visor').hidden = false;
+  }
+
+  function leerGuardado() {
+    try {
+      const a = JSON.parse(recuperar('archivo'));
+      const t = recuperar('texto');
+      if (a && a.nombre && FORMATO_POR_EXTENSION[a.extension] && t != null) return Object.assign(a, { texto: t });
+    } catch (e) { /* nada guardado */ }
+    return null;
+  }
+
+  /** Abre el contenido en el visor. El formato sale de la extensión del archivo. */
+  function abrir(nombre, extension, contenido) {
+    archivo = { nombre, extension, formato: FORMATO_POR_EXTENSION[extension] };
+    $('#nombre-archivo').textContent = nombre;
+    $('#formato-archivo').textContent = NOMBRE_FORMATO[archivo.formato];
     texto.value = contenido;
-    if (formato) selFormato.value = formato;
+    guardar('archivo', JSON.stringify({ nombre, extension }));
     guardar('texto', contenido);
-    guardar('formato', selFormato.value);
     nube.seleccion = null;
+    mostrarVisor();
     generar(true);
   }
+
+  $('#archivo').addEventListener('change', (ev) => {
+    const f = ev.target.files[0];
+    ev.target.value = '';
+    if (!f) return;
+    const m = f.name.match(/\.([^.]+)$/);
+    const extension = m ? m[1].toLowerCase() : '';
+    if (!FORMATO_POR_EXTENSION[extension]) {
+      avisar('🚫 «' + f.name + '» no está permitido. Solo se pueden abrir archivos .rpy (Ren\'Py) o .ink (Ink).');
+      return;
+    }
+    f.text().then(
+      (t) => abrir(f.name, extension, t),
+      () => avisar('No pudimos leer «' + f.name + '». Probá abrirlo de nuevo.')
+    );
+  });
+
+  const elegirArchivo = () => $('#archivo').click();
+  $('#btn-abrir').addEventListener('click', elegirArchivo);
+  $('#btn-abrir-otro').addEventListener('click', elegirArchivo);
+  $('#btn-portada').addEventListener('click', mostrarPortada);
+  $('#btn-seguir').addEventListener('click', () => {
+    const g = leerGuardado();
+    if (g) abrir(g.nombre, g.extension, g.texto);
+  });
+
+  for (const e of window.EJEMPLOS || []) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'boton';
+    b.textContent = e.nombre;
+    const extension = e.formato === 'ink' ? 'ink' : 'rpy';
+    b.addEventListener('click', () => abrir('michi.' + extension, extension, e.texto));
+    $('#lista-ejemplos').appendChild(b);
+  }
+
+  // ------------------------------------------------------------- controles
 
   let espera = null;
   texto.addEventListener('input', () => {
@@ -321,33 +391,19 @@
   });
 
   btnEditor.addEventListener('click', () => mostrarEditor(editor.hidden));
-  selFormato.addEventListener('change', () => {
-    guardar('formato', selFormato.value);
-    generar(true);
-  });
   chkAgrupar.addEventListener('change', () => {
     guardar('agrupar', chkAgrupar.checked ? '1' : '0');
     generar(true);
   });
 
-  for (const e of window.EJEMPLOS || []) {
-    const o = document.createElement('option');
-    o.value = e.id;
-    o.textContent = e.nombre;
-    selEjemplo.appendChild(o);
+  function ponerRecorte(recortar) {
+    btnRecortar.setAttribute('aria-pressed', String(recortar));
+    nube.completo = !recortar;
+    guardar('recortar', recortar ? '1' : '0');
   }
-  selEjemplo.addEventListener('change', () => {
-    const e = (window.EJEMPLOS || []).find((x) => x.id === selEjemplo.value);
-    if (e) cargar(e.texto, 'auto');
-    selEjemplo.value = '';
-  });
-
-  $('#archivo').addEventListener('change', (ev) => {
-    const f = ev.target.files[0];
-    if (!f) return;
-    const formato = /\.ink$/i.test(f.name) ? 'ink' : /\.rpy$/i.test(f.name) ? 'renpy' : 'auto';
-    f.text().then((t) => cargar(t, formato));
-    ev.target.value = '';
+  btnRecortar.addEventListener('click', () => {
+    ponerRecorte(btnRecortar.getAttribute('aria-pressed') !== 'true');
+    generar(false);
   });
 
   $('#zoom-mas').addEventListener('click', () => nube.zoom(1.25));
@@ -356,7 +412,7 @@
   $('#zoom-inicio').addEventListener('click', () => nube.alInicio());
 
   document.addEventListener('keydown', (ev) => {
-    if (ev.target === texto) return;
+    if (ev.target === texto || $('#visor').hidden) return;
     if (ev.key === 'Escape') nube.seleccionar(null);
     if (ev.key === '+' || ev.key === '=') nube.zoom(1.2);
     if (ev.key === '-') nube.zoom(1 / 1.2);
@@ -365,11 +421,9 @@
 
   // ------------------------------------------------------------- arranque
 
-  const textoGuardado = recuperar('texto');
-  selFormato.value = recuperar('formato') || 'auto';
   chkAgrupar.checked = recuperar('agrupar') === '1';
+  ponerRecorte(recuperar('recortar') !== '0');
   const angosta = window.matchMedia('(max-width: 860px)').matches;
   mostrarEditor(recuperar('editor') ? recuperar('editor') === '1' : !angosta);
-  texto.value = textoGuardado != null && textoGuardado.trim() ? textoGuardado : (window.EJEMPLOS && window.EJEMPLOS[0].texto) || '';
-  generar(true);
+  mostrarPortada();
 })();
