@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nube de diálogos</title>
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <input id="archivo" type="file" accept=".rpy,.ink" hidden>
+  <div id="mensaje" class="mensaje" role="alert" hidden></div>
+
+  <!-- ===================================================== PORTADA -->
+  <section id="portada" class="portada">
+    <div class="portada-caja">
+      <span class="logo-grande" aria-hidden="true">🕸️</span>
+      <h1>Nube de diálogos</h1>
+      <p class="bajada">Abrí un guion de Ren'Py (<code>.rpy</code>) o de Ink (<code>.ink</code>) y miralo como una nube de nodos.</p>
+      <button id="btn-abrir" class="boton-principal" type="button">📂 Abrir diálogo</button>
+      <p class="pista-soltar">o arrastrá el archivo y soltalo en la página</p>
+      <button id="btn-seguir" class="boton-secundario" type="button" hidden></button>
+      <div class="portada-ejemplos">
+        <span>¿No tenés uno a mano? Probá un ejemplo:</span>
+        <div id="lista-ejemplos" class="lista-ejemplos"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== VISOR -->
+  <div id="visor" class="visor" hidden>
+    <header class="barra">
+      <div class="marca">
+        <button id="btn-portada" class="boton boton-volver" type="button" title="Volver a la portada">⬅</button>
+        <div class="archivo-actual">
+          <b id="nombre-archivo"></b>
+          <span id="formato-archivo" class="pastilla"></span>
+        </div>
+      </div>
+      <div class="acciones">
+        <button id="btn-editor" class="boton" type="button" aria-pressed="true" title="Mostrar u ocultar el texto">📝 <span>Texto</span></button>
+        <button id="btn-abrir-otro" class="boton" type="button" title="Abrir otro .rpy o .ink">📂 <span>Abrir otro</span></button>
+        <label class="interruptor destacado" title="Prendido: cada texto en una sola línea, cortado con «…». Apagado: el texto completo baja en columna.">
+          <input id="truncar" type="checkbox" checked> <span>✂️ Truncar texto</span>
+        </label>
+        <label class="interruptor" title="Junta las líneas seguidas sin elecciones en un solo nodo">
+          <input id="agrupar" type="checkbox"> <span>📦 Agrupar diálogos</span>
+        </label>
+      </div>
+    </header>
+
+    <main class="principal">
+      <section id="editor" class="panel-editor" aria-label="Texto del guion">
+        <div class="cabeza-panel">
+          <span>Guion</span>
+          <span id="formato-detectado" class="pastilla"></span>
+        </div>
+        <textarea id="texto" spellcheck="false" autocomplete="off"></textarea>
+        <div id="avisos" class="avisos"></div>
+      </section>
+
+      <section class="lienzo">
+        <svg id="nube" role="img" aria-label="Nube de nodos con los diálogos"></svg>
+        <div id="vacio" class="vacio" hidden>
+          <p>El archivo está vacío 🤷</p>
+        </div>
+        <div id="estado" class="estado"></div>
+        <div class="controles-zoom">
+          <button id="zoom-mas" type="button" title="Acercar">+</button>
+          <button id="zoom-menos" type="button" title="Alejar">−</button>
+          <button id="zoom-ajustar" type="button" title="Ver toda la nube">⤢</button>
+          <button id="zoom-inicio" type="button" title="Ir al inicio">⌂</button>
+        </div>
+      </section>
+
+      <aside id="detalle" class="panel-detalle" hidden aria-label="Detalle del nodo"></aside>
+    </main>
+  </div>
+
+  <script src="js/modelo.js"></script>
+  <script src="js/lector-renpy.js"></script>
+  <script src="js/lector-ink.js"></script>
+  <script src="js/ubicar.js"></script>
+  <script src="js/nube.js"></script>
+  <script src="js/ejemplos.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
