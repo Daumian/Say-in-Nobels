@@ -39,8 +39,13 @@
       <div class="acciones">
         <button id="btn-editor" class="boton" type="button" aria-pressed="true" title="Mostrar u ocultar el texto">📝 <span>Texto</span></button>
         <button id="btn-abrir-otro" class="boton" type="button" title="Abrir otro .rpy o .ink">📂 <span>Abrir otro</span></button>
-        <label class="interruptor destacado" title="Prendido: cada texto en una sola línea, cortado con «…». Apagado: el texto completo baja en columna.">
-          <input id="truncar" type="checkbox" checked> <span>✂️ Truncar texto</span>
+        <div class="segmentos" role="group" aria-label="Truncar: dirección de la nube">
+          <span class="segmentos-titulo">Truncar</span>
+          <button id="dir-horizontal" type="button" aria-pressed="true" title="La historia avanza hacia la derecha">➡️ <span>Horizontal</span></button>
+          <button id="dir-vertical" type="button" aria-pressed="false" title="La historia baja, con las ramas hacia los costados">⬇️ <span>Vertical</span></button>
+        </div>
+        <label class="interruptor" title="Muestra el texto entero de cada nodo en vez de cortarlo con «…»">
+          <input id="completo" type="checkbox"> <span>📜 Texto completo</span>
         </label>
         <label class="interruptor" title="Junta las líneas seguidas sin elecciones en un solo nodo">
           <input id="agrupar" type="checkbox"> <span>📦 Agrupar diálogos</span>

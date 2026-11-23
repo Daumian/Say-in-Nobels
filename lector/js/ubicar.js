@@ -75,6 +75,8 @@
       }
     }
 
+    if (medidas.vertical) return enColumnas(grafo, medidas, columna, fila, filas, hijos, raicesUsadas, atras);
+
     // 4) Alto de cada fila = el nodo más alto de esa fila
     const altoFila = new Array(filas).fill(0);
     for (const n of grafo.nodos) altoFila[fila.get(n.id)] = Math.max(altoFila[fila.get(n.id)], altoDe(n));
@@ -94,6 +96,49 @@
       maxX = Math.max(maxX, x + ancho);
     }
     return { pos, atras, ancho: maxX, alto: Math.max(0, y - sepY) };
+  }
+
+  /**
+   * Versión vertical: la historia baja. Cada "columna" de antes pasa a ser un piso,
+   * y cada nodo se centra arriba de sus hijos (como un árbol genealógico).
+   */
+  function enColumnas(grafo, medidas, piso, fila, filas, hijos, raices, atras) {
+    const { ancho, altoDe, sepX, sepY } = medidas;
+
+    // Centro horizontal: las hojas usan su fila; el padre va al medio de su primer y último hijo
+    const centro = new Map();
+    for (const r of raices) {
+      const pila = [{ id: r, i: 0 }];
+      while (pila.length) {
+        const tope = pila[pila.length - 1];
+        const hs = hijos.get(tope.id);
+        if (tope.i < hs.length) {
+          pila.push({ id: hs[tope.i++], i: 0 });
+        } else {
+          centro.set(tope.id, hs.length ? (centro.get(hs[0]) + centro.get(hs[hs.length - 1])) / 2 : fila.get(tope.id));
+          pila.pop();
+        }
+      }
+    }
+
+    // Alto de cada piso = el nodo más alto de ese piso
+    let pisos = 0;
+    for (const n of grafo.nodos) pisos = Math.max(pisos, piso.get(n.id) + 1);
+    const altoPiso = new Array(pisos).fill(0);
+    for (const n of grafo.nodos) altoPiso[piso.get(n.id)] = Math.max(altoPiso[piso.get(n.id)], altoDe(n));
+    const yPiso = [];
+    let y = 0;
+    for (let k = 0; k < pisos; k++) {
+      yPiso.push(y);
+      y += altoPiso[k] + sepY * 2.2;
+    }
+
+    const paso = ancho + sepX * 0.45;
+    const pos = new Map();
+    for (const n of grafo.nodos) {
+      pos.set(n.id, { x: centro.get(n.id) * paso, y: yPiso[piso.get(n.id)], w: ancho, h: altoDe(n) });
+    }
+    return { pos, atras, ancho: Math.max(0, (filas - 1) * paso + ancho), alto: Math.max(0, y - sepY * 2.2), vertical: true };
   }
 
   const Ubicar = { ubicar };
