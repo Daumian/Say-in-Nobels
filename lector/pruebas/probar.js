@@ -84,6 +84,20 @@ Hola.
   assert.strictEqual(siguientesDe(g, porTexto(g, 'Elegiste A')).length, 2);
 });
 
+prueba('Ink: etiquetas dentro de una puntada', () => {
+  const g = LectorInk.leer(`
+-> nudo
+=== nudo ===
+= puntada
+* [Uno] -> fin_bueno
+* [Dos] -> nudo.puntada.fin_malo
+- (fin_bueno) Bien.
+-> END
+- (fin_malo) Mal.
+-> END`);
+  assert.deepStrictEqual(g.avisos.filter((a) => a.mensaje.includes('no existe')), []);
+});
+
 prueba("Ren'Py: salto a un label que no existe avisa", () => {
   const g = LectorRenpy.leer('label start:\n    "Hola"\n    jump nada\n');
   assert(g.avisos.some((a) => a.mensaje.includes('nada')));

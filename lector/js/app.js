@@ -339,7 +339,34 @@
   $('#archivo').addEventListener('change', (ev) => {
     const f = ev.target.files[0];
     ev.target.value = '';
+    if (f) abrirArchivo(f);
+  });
+
+  // Arrastrar y soltar un archivo en cualquier parte de la página
+  let arrastres = 0;
+  document.addEventListener('dragenter', (ev) => {
+    if (!ev.dataTransfer || !Array.from(ev.dataTransfer.types).includes('Files')) return;
+    ev.preventDefault();
+    arrastres++;
+    document.body.classList.add('soltando');
+  });
+  document.addEventListener('dragover', (ev) => {
+    if (ev.dataTransfer && Array.from(ev.dataTransfer.types).includes('Files')) ev.preventDefault();
+  });
+  document.addEventListener('dragleave', () => {
+    arrastres = Math.max(0, arrastres - 1);
+    if (!arrastres) document.body.classList.remove('soltando');
+  });
+  document.addEventListener('drop', (ev) => {
+    arrastres = 0;
+    document.body.classList.remove('soltando');
+    const f = ev.dataTransfer && ev.dataTransfer.files[0];
     if (!f) return;
+    ev.preventDefault();
+    abrirArchivo(f);
+  });
+
+  function abrirArchivo(f) {
     const m = f.name.match(/\.([^.]+)$/);
     const extension = m ? m[1].toLowerCase() : '';
     if (!FORMATO_POR_EXTENSION[extension]) {
@@ -350,7 +377,7 @@
       (t) => abrir(f.name, extension, t),
       () => avisar('No pudimos leer «' + f.name + '». Probá abrirlo de nuevo.')
     );
-  });
+  }
 
   const elegirArchivo = () => $('#archivo').click();
   $('#btn-abrir').addEventListener('click', elegirArchivo);

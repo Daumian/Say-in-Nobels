@@ -261,7 +261,7 @@
 
     const salto = (destino, ctx, linea) => {
       if (destino === 'END' || destino === 'DONE') return [];
-      return [{ salto: destino, ctx: ctx.nudo, linea }];
+      return [{ salto: destino, ctx, linea }];
     };
 
     function nodoTexto(texto, extras, linea, siguientes) {
@@ -317,7 +317,7 @@
             const extras = op.extras.slice();
             if (op.fija) extras.push({ tipo: 'fija', valor: 'se puede elegir más de una vez' });
             const n = c.nodo({ tipo: 'opcion', texto: op.boton, condicion: op.condicion, extras, linea: op.linea, siguientes: continua, color: '#c03ad6' });
-            if (op.etiqueta) entradas.set(ctx.nudo + '.' + op.etiqueta, [{ a: n.id }]);
+            if (op.etiqueta) registrarEtiqueta(ctx, op.etiqueta, [{ a: n.id }]);
             return { a: n.id };
           });
         }
@@ -330,15 +330,22 @@
     function reunion(it, sig, ctx) {
       const sigs = it.desvio ? salto(it.desvio, ctx, it.linea) : sig;
       const r = it.texto ? [{ a: nodoTexto(it.texto, it.extras, it.linea, sigs).id }] : sigs;
-      if (it.etiqueta) entradas.set(ctx.nudo + '.' + it.etiqueta, r);
+      if (it.etiqueta) registrarEtiqueta(ctx, it.etiqueta, r);
       return r;
+    }
+
+    /** Una etiqueta (nombre) se puede nombrar como nudo.etiqueta o nudo.puntada.etiqueta. */
+    function registrarEtiqueta(ctx, etiqueta, aristas) {
+      if (ctx.puntada) entradas.set(ctx.nudo + '.' + ctx.puntada + '.' + etiqueta, aristas);
+      const corta = ctx.nudo + '.' + etiqueta;
+      if (!ctx.puntada || !entradas.has(corta)) entradas.set(corta, aristas);
     }
 
     // 5) Contenido de arriba, nudos y puntadas
     const entradaArriba = compilar(tejer(leerItems(arriba), 0, 0).sec, [], { nudo: '' });
     for (const nudo of nudos) {
       const ctx = { nudo: nudo.nombre };
-      for (const p of nudo.puntadas) entradas.set(nudo.nombre + '.' + p.nombre, compilar(tejer(leerItems(p.lineas), 0, 0).sec, [], ctx));
+      for (const p of nudo.puntadas) entradas.set(nudo.nombre + '.' + p.nombre, compilar(tejer(leerItems(p.lineas), 0, 0).sec, [], { nudo: nudo.nombre, puntada: p.nombre }));
       const propias = compilar(tejer(leerItems(nudo.lineas), 0, 0).sec, [], ctx);
       entradas.set(nudo.nombre, nudo.lineas.length || !nudo.puntadas.length ? propias : [{ salto: nudo.nombre + '.' + nudo.puntadas[0].nombre }]);
     }
@@ -352,7 +359,8 @@
 
     c.resolverSaltos((a) => {
       const candidatos = [];
-      if (a.ctx) candidatos.push(a.ctx + '.' + a.salto);
+      if (a.ctx && a.ctx.puntada) candidatos.push(a.ctx.nudo + '.' + a.ctx.puntada + '.' + a.salto);
+      if (a.ctx && a.ctx.nudo) candidatos.push(a.ctx.nudo + '.' + a.salto);
       candidatos.push(a.salto);
       for (const k of candidatos) if (entradas.has(k)) return entradas.get(k);
       return null;
