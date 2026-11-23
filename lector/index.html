@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nube de diálogos</title>
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <header class="barra">
+    <div class="marca">
+      <span class="logo" aria-hidden="true">🕸️</span>
+      <div>
+        <h1>Nube de diálogos</h1>
+        <p>Say-in-Nobels · lector de Ren'Py e Ink</p>
+      </div>
+    </div>
+    <div class="acciones">
+      <button id="btn-editor" class="boton" type="button" aria-pressed="true" title="Mostrar u ocultar el texto">📝 <span>Texto</span></button>
+      <label class="boton" title="Abrir un archivo .rpy o .ink">📂 <span>Abrir</span>
+        <input id="archivo" type="file" accept=".rpy,.ink,.txt" hidden>
+      </label>
+      <select id="ejemplo" class="boton" aria-label="Cargar un ejemplo">
+        <option value="">📚 Ejemplos…</option>
+      </select>
+      <select id="formato" class="boton" aria-label="Formato del texto">
+        <option value="auto">Formato: automático</option>
+        <option value="renpy">Ren'Py</option>
+        <option value="ink">Ink</option>
+      </select>
+      <label class="interruptor" title="Junta las líneas seguidas sin elecciones en un solo nodo">
+        <input id="agrupar" type="checkbox"> <span>Agrupar diálogos seguidos</span>
+      </label>
+    </div>
+  </header>
+
+  <main class="principal">
+    <section id="editor" class="panel-editor" aria-label="Texto del guion">
+      <div class="cabeza-panel">
+        <span>Guion</span>
+        <span id="formato-detectado" class="pastilla"></span>
+      </div>
+      <textarea id="texto" spellcheck="false" autocomplete="off" placeholder="Pegá acá un guion de Ren'Py o de Ink…"></textarea>
+      <div id="avisos" class="avisos"></div>
+    </section>
+
+    <section class="lienzo">
+      <svg id="nube" role="img" aria-label="Nube de nodos con los diálogos"></svg>
+      <div id="vacio" class="vacio" hidden>
+        <p>Pegá un guion a la izquierda o elegí un ejemplo 👆</p>
+      </div>
+      <div id="estado" class="estado"></div>
+      <div class="controles-zoom">
+        <button id="zoom-mas" type="button" title="Acercar">+</button>
+        <button id="zoom-menos" type="button" title="Alejar">−</button>
+        <button id="zoom-ajustar" type="button" title="Ver toda la nube">⤢</button>
+        <button id="zoom-inicio" type="button" title="Ir al inicio">⌂</button>
+      </div>
+    </section>
+
+    <aside id="detalle" class="panel-detalle" hidden aria-label="Detalle del nodo"></aside>
+  </main>
+
+  <script src="js/modelo.js"></script>
+  <script src="js/lector-renpy.js"></script>
+  <script src="js/lector-ink.js"></script>
+  <script src="js/ubicar.js"></script>
+  <script src="js/nube.js"></script>
+  <script src="js/ejemplos.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
