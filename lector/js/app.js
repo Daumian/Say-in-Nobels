@@ -7,7 +7,9 @@
   const $ = (s) => document.querySelector(s);
   const texto = $('#texto');
   const chkAgrupar = $('#agrupar');
-  const chkTruncar = $('#truncar');
+  const chkCompleto = $('#completo');
+  const btnHorizontal = $('#dir-horizontal');
+  const btnVertical = $('#dir-vertical');
   const editor = $('#editor');
   const btnEditor = $('#btn-editor');
   const detalle = $('#detalle');
@@ -423,14 +425,28 @@
     generar(true);
   });
 
-  // Truncar: prendido = cada texto en una línea; apagado = texto completo en columna
-  function ponerTruncado(truncar) {
-    chkTruncar.checked = truncar;
-    nube.completo = !truncar;
-    guardar('truncar', truncar ? '1' : '0');
+  // Truncar: cambia la dirección de la nube (➡️ horizontal o ⬇️ vertical)
+  function ponerDireccion(vertical) {
+    nube.vertical = vertical;
+    btnHorizontal.setAttribute('aria-pressed', String(!vertical));
+    btnVertical.setAttribute('aria-pressed', String(vertical));
+    guardar('direccion', vertical ? 'vertical' : 'horizontal');
   }
-  chkTruncar.addEventListener('change', () => {
-    ponerTruncado(chkTruncar.checked);
+  btnHorizontal.addEventListener('click', () => {
+    if (!nube.vertical) return;
+    ponerDireccion(false);
+    generar(true);
+  });
+  btnVertical.addEventListener('click', () => {
+    if (nube.vertical) return;
+    ponerDireccion(true);
+    generar(true);
+  });
+
+  // Texto completo: el texto entero de cada nodo, o cortado con «…»
+  chkCompleto.addEventListener('change', () => {
+    nube.completo = chkCompleto.checked;
+    guardar('completo', chkCompleto.checked ? '1' : '0');
     generar(false);
   });
 
@@ -450,7 +466,8 @@
   // ------------------------------------------------------------- arranque
 
   chkAgrupar.checked = recuperar('agrupar') === '1';
-  ponerTruncado(recuperar('truncar') !== '0');
+  ponerDireccion(recuperar('direccion') === 'vertical');
+  chkCompleto.checked = nube.completo = recuperar('completo') === '1';
   const angosta = window.matchMedia('(max-width: 860px)').matches;
   mostrarEditor(recuperar('editor') ? recuperar('editor') === '1' : !angosta);
   mostrarPortada();

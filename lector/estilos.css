@@ -232,7 +232,29 @@ body.soltando::after {
 .boton[aria-pressed="true"] { background: var(--acento-suave); border-color: var(--acento); }
 .interruptor { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; color: var(--texto-suave); }
 .interruptor input { accent-color: var(--acento); width: 16px; height: 16px; }
-.interruptor.destacado { height: 32px; padding: 0 10px; border: 1px solid var(--acento); border-radius: 8px; background: var(--acento-suave); color: var(--texto); font-weight: 600; }
+.segmentos {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  border: 1px solid var(--acento);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--superficie-2);
+}
+.segmentos-titulo { padding: 0 8px; font-weight: 700; font-size: 12.5px; color: var(--acento); }
+.segmentos button {
+  height: 100%;
+  border: 0;
+  border-left: 1px solid var(--borde);
+  padding: 0 10px;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.segmentos button[aria-pressed="true"] { background: var(--acento); color: var(--superficie); font-weight: 700; }
+.segmentos button:focus-visible { outline: 3px solid var(--seleccion); outline-offset: -3px; }
 
 /* ================================================================ paneles */
 .principal { flex: 1; display: flex; min-height: 0; position: relative; }
@@ -526,7 +548,7 @@ body.soltando::after {
 @media (max-width: 860px) {
   .barra { padding: 8px 16px; }
   .marca p { display: none; }
-  .boton span { display: none; }
+  .boton span, .segmentos button span { display: none; }
   .panel-editor {
     position: absolute;
     inset: 0 auto 0 0;

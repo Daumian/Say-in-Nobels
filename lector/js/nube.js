@@ -41,7 +41,8 @@
       this.alSeleccionar = (opciones && opciones.alSeleccionar) || (() => {});
       this.vista = { x: 40, y: 40, k: 1 };
       this.seleccion = null;
-      this.completo = false; // false = texto recortado en una línea; true = texto completo en columna
+      this.completo = false; // false = texto recortado en una línea; true = texto completo
+      this.vertical = false; // false = la historia va hacia la derecha; true = la historia baja
 
       const defs = el(SVG, 'defs', null, svg);
       const flecha = el(SVG, 'marker', { id: 'flecha', viewBox: '0 0 10 10', refX: '9', refY: '5', markerWidth: '7', markerHeight: '7', orient: 'auto-start-reverse' }, defs);
@@ -60,6 +61,7 @@
     dibujar(grafo) {
       this.grafo = grafo;
       this.svg.classList.toggle('completo', this.completo);
+      this.svg.classList.toggle('vertical', this.vertical);
 
       // Armamos todas las cajas en un lugar invisible para medir cuánto mide cada una
       const medidor = div('nube-medidor' + (this.completo ? ' completo' : ''), null, document.body);
@@ -73,7 +75,7 @@
       for (const [id, caja] of cajas) altos.set(id, Math.ceil(caja.getBoundingClientRect().height));
       medidor.remove();
 
-      const res = raiz.Ubicar.ubicar(grafo, { ancho: ANCHO, altoDe: (n) => altos.get(n.id), sepX: 70, sepY: 22 });
+      const res = raiz.Ubicar.ubicar(grafo, { ancho: ANCHO, altoDe: (n) => altos.get(n.id), sepX: 70, sepY: 22, vertical: this.vertical });
       this.pos = res.pos;
       this.tam = { ancho: res.ancho, alto: res.alto };
       this.capaAristas.textContent = '';
@@ -86,7 +88,7 @@
         n.siguientes.forEach((s) => {
           const q = this.pos.get(s.a);
           if (!q) return;
-          const vuelve = res.atras.has(n.id + '>' + s.a) || q.x <= p.x;
+          const vuelve = res.atras.has(n.id + '>' + s.a) || (this.vertical ? q.y <= p.y : q.x <= p.x);
           this._arista(n, s, p, q, vuelve);
         });
       }
@@ -108,6 +110,7 @@
     }
 
     _arista(origen, s, p, q, vuelve) {
+      if (this.vertical) return this._aristaVertical(origen, s, p, q, vuelve);
       const x1 = p.x + p.w;
       const y1 = p.y + Math.min(p.h / 2, 36);
       const x2 = q.x;
@@ -124,6 +127,35 @@
         d = `M${x1},${y1} C${x1 + 60},${y1} ${x1 + 60},${arriba} ${x1},${arriba} L${x2},${arriba} C${x2 - 60},${arriba} ${x2 - 60},${y2} ${x2},${y2}`;
         medio = { x: (x1 + x2) / 2, y: arriba };
       }
+      this._trazar(origen, s, d, medio, vuelve);
+    }
+
+    _aristaVertical(origen, s, p, q, vuelve) {
+      let d;
+      let medio;
+      if (!vuelve) {
+        // De abajo de una caja a arriba de la otra
+        const x1 = p.x + p.w / 2;
+        const y1 = p.y + p.h;
+        const x2 = q.x + q.w / 2;
+        const y2 = q.y;
+        const dy = Math.max(24, (y2 - y1) / 2);
+        d = `M${x1},${y1} C${x1},${y1 + dy} ${x2},${y2 - dy} ${x2},${y2}`;
+        medio = { x: (x1 + x2) / 2, y: (y1 + y2) / 2 };
+      } else {
+        // Vuelve para arriba: un arco por el costado derecho
+        const x1 = p.x + p.w;
+        const y1 = p.y + p.h / 2;
+        const x2 = q.x + q.w;
+        const y2 = q.y + q.h / 2;
+        const lado = Math.max(x1, x2) + 34;
+        d = `M${x1},${y1} C${lado},${y1} ${lado},${y1} ${lado},${y1 - 20} L${lado},${y2 + 20} C${lado},${y2} ${lado},${y2} ${x2},${y2}`;
+        medio = { x: lado, y: (y1 + y2) / 2 };
+      }
+      this._trazar(origen, s, d, medio, vuelve);
+    }
+
+    _trazar(origen, s, d, medio, vuelve) {
       const g = el(SVG, 'g', { class: 'arista' + (vuelve ? ' vuelve' : '') + (s.condicion ? ' condicional' : '') }, this.capaAristas);
       el(SVG, 'path', { d, 'marker-end': 'url(#flecha)' }, g);
       if (s.condicion) {
@@ -265,7 +297,9 @@
       if (!p) return;
       const r = this.svg.getBoundingClientRect();
       const k = r.width < 600 ? 0.65 : 0.9;
-      this.vista = { k, x: 24 - p.x * k, y: r.height / 2 - (p.y + p.h / 2) * k };
+      this.vista = this.vertical
+        ? { k, x: r.width / 2 - (p.x + p.w / 2) * k, y: 24 - p.y * k }
+        : { k, x: 24 - p.x * k, y: r.height / 2 - (p.y + p.h / 2) * k };
       this._aplicar();
     }
 

@@ -10,7 +10,9 @@ Abrí `index.html` en el navegador (doble clic, no hace falta servidor) y:
 
 - En la portada tocá **📂 Abrir diálogo** o arrastrá el archivo a la página. Solo se aceptan `.rpy`
   (se lee como Ren'Py) y `.ink` (se lee como Ink). También hay ejemplos para probar.
-- **✂️ Truncar texto**: prendido, cada texto va en una sola línea; apagado, el texto completo baja en columna.
+- **Truncar** cambia la dirección de la nube: **➡️ Horizontal** (la historia avanza a la derecha) o
+  **⬇️ Vertical** (la historia baja y las elecciones se abren hacia los costados).
+- **📜 Texto completo** muestra el texto entero de cada nodo en vez de cortarlo con «…».
 - **Arrastrá** para moverte, usá la **rueda** o pellizcá para hacer zoom.
 - **Hacé clic en un nodo** para ver todo su detalle y saltar a la línea del texto.
 - **📦 Agrupar diálogos** junta las líneas sin elecciones en un solo bloque.
