@@ -380,6 +380,45 @@ body.soltando::after {
 }
 .controles-zoom button:hover { background: var(--acento-suave); }
 
+.capitulos {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  max-width: calc(100% - 24px);
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  box-shadow: var(--sombra);
+}
+.capitulos[hidden] { display: none; }
+.capitulos button {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--acento-suave);
+  color: var(--acento);
+  font-size: 14px;
+  cursor: pointer;
+}
+.capitulos button:disabled { opacity: 0.35; cursor: default; }
+.capitulos select {
+  min-width: 0;
+  max-width: 340px;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--borde);
+  border-radius: 7px;
+  background: var(--superficie-2);
+  font-weight: 600;
+}
+
 /* ================================================================ aristas */
 .arista path { fill: none; stroke: var(--arista); stroke-width: 2.2; }
 .arista.vuelve path { stroke-dasharray: 7 6; opacity: 0.75; }
@@ -479,6 +518,13 @@ body.soltando::after {
 .tipo-accion.elegido { outline: 3px solid var(--seleccion); outline-offset: 2px; }
 
 .tipo-falta { background: var(--falta); }
+
+.tipo-capitulo { background: var(--superficie); color: var(--texto); outline: 2px dashed var(--acento); outline-offset: -2px; box-shadow: none; }
+.tipo-capitulo .cuadro { background: var(--acento-suave); border-right-color: var(--borde); }
+.tipo-capitulo .quien { color: var(--texto-suave); }
+.tipo-capitulo .texto { font-weight: 700; }
+.ir-capitulo { align-self: center; padding: 0 10px; font-weight: 700; color: var(--acento); white-space: nowrap; }
+.tipo-capitulo:hover { background: var(--acento-suave); filter: none; }
 .tipo-falta .cuadro { background: #ffd2cc; }
 
 .tipo-bloque .cuerpo { gap: 3px; padding-top: 8px; }

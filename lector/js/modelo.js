@@ -12,6 +12,7 @@
  *     extras:     [{ tipo: 'escena', valor: 'bg patio' }, ...],
  *     condicion:  'pistas >= 1' | null   (para que una opción aparezca),
  *     linea:      14              (línea del archivo original),
+ *     capitulo:   'start'         (label de Ren'Py o nudo de Ink donde está),
  *     siguientes: [{ a: 'n13', condicion: 'elsa_confia' | null }, ...],
  *   }
  *
@@ -61,12 +62,20 @@
       this.contador = 0;
       this.avisos = [];
       this.personajes = new Map(); // clave -> { nombre, color }
+      this.capitulo = null; // capítulo que se está leyendo ahora
+      this.ordenCapitulos = [];
+    }
+
+    /** Desde acá, los nodos nuevos pertenecen a este capítulo. */
+    empezarCapitulo(nombre) {
+      this.capitulo = nombre;
+      if (!this.ordenCapitulos.includes(nombre)) this.ordenCapitulos.push(nombre);
     }
 
     nodo(datos) {
       const id = 'n' + ++this.contador;
       const n = Object.assign(
-        { tipo: 'dialogo', personaje: null, color: COLOR_NARRADOR, texto: '', extras: [], condicion: null, linea: null, siguientes: [] },
+        { tipo: 'dialogo', personaje: null, color: COLOR_NARRADOR, texto: '', extras: [], condicion: null, linea: null, siguientes: [], capitulo: this.capitulo },
         datos,
         { id }
       );
@@ -99,6 +108,7 @@
      */
     resolverSaltos(buscar) {
       const faltantes = new Map();
+      let actual = null;
       const resolver = (aristas, profundidad) => {
         const salida = [];
         for (const a of aristas) {
@@ -112,26 +122,35 @@
           }
           const destino = buscar(a);
           if (destino === null) {
-            if (!faltantes.has(a.salto)) {
-              const n = this.nodo({ tipo: 'falta', texto: 'Salto a "' + a.salto + '", que no existe', linea: a.linea || null });
-              faltantes.set(a.salto, n.id);
+            const clave = a.salto + '|' + actual.capitulo;
+            if (!faltantes.has(clave)) {
+              const n = this.nodo({ tipo: 'falta', texto: 'Salto a "' + a.salto + '", que no existe', linea: a.linea || null, capitulo: actual.capitulo });
+              faltantes.set(clave, n.id);
               this.aviso(a.linea || null, 'Salto a "' + a.salto + '", que no existe.');
             }
-            salida.push({ a: faltantes.get(a.salto), condicion: a.condicion || null });
+            salida.push({ a: faltantes.get(clave), condicion: a.condicion || null });
             continue;
           }
           salida.push(...resolver(conCondicion(destino, a.condicion), profundidad + 1));
         }
         return sinRepetidas(salida);
       };
-      for (const n of Array.from(this.nodos.values())) n.siguientes = resolver(n.siguientes, 0);
+      for (const n of Array.from(this.nodos.values())) {
+        actual = n;
+        n.siguientes = resolver(n.siguientes, 0);
+      }
     }
 
     /** Arma el grafo final, con los nodos alcanzables desde el inicio primero. */
     terminar(idInicio) {
       const nodos = Array.from(this.nodos.values());
       for (const n of nodos) n.siguientes = n.siguientes.filter((s) => s.a && this.nodos.has(s.a));
+      // El inicio va en el capítulo donde arranca la historia
+      const inicio = this.nodos.get(idInicio);
+      if (inicio && inicio.siguientes.length) inicio.capitulo = this.nodos.get(inicio.siguientes[0].a).capitulo;
+      const usados = new Set(nodos.map((n) => n.capitulo));
       return completar({
+        capitulos: this.ordenCapitulos.filter((c) => usados.has(c)),
         formato: this.formato,
         inicio: idInicio,
         nodos,
@@ -206,7 +225,45 @@
     return completar(Object.assign({}, grafo, { nodos: nuevos, agrupado: true }));
   }
 
-  const Modelo = { Constructor, completar, agrupar, unirCondiciones, conCondicion, sinRepetidas, colorPorNombre, COLOR_NARRADOR };
+  /**
+   * Arma un grafo con un solo capítulo. Las flechas que salen o llegan desde
+   * otro capítulo apuntan a una caja con el nombre de ese capítulo.
+   */
+  function vistaCapitulo(grafo, capitulo) {
+    const adentro = (n) => n.capitulo === capitulo;
+    const nuevos = new Map();
+    const fantasma = (tipo, otro) => {
+      const id = (tipo === 'sale' ? 'sale:' : 'entra:') + otro;
+      if (!nuevos.has(id)) {
+        nuevos.set(id, {
+          id, tipo: 'capitulo', direccion: tipo, destino: otro, texto: otro, personaje: null,
+          color: '#0f6b94', extras: [], condicion: null, linea: null, siguientes: [], capitulo,
+        });
+      }
+      return nuevos.get(id);
+    };
+    for (const n of grafo.nodos) if (adentro(n)) nuevos.set(n.id, Object.assign({}, n, { siguientes: [] }));
+    for (const n of grafo.nodos) {
+      for (const s of n.siguientes) {
+        const d = grafo.porId.get(s.a);
+        if (adentro(n) && adentro(d)) nuevos.get(n.id).siguientes.push(s);
+        else if (adentro(n)) nuevos.get(n.id).siguientes.push({ a: fantasma('sale', d.capitulo).id, condicion: s.condicion });
+        else if (adentro(d)) {
+          const f = fantasma('entra', n.capitulo);
+          if (!f.siguientes.some((x) => x.a === d.id)) f.siguientes.push({ a: d.id, condicion: null });
+        }
+      }
+    }
+    const nodos = Array.from(nuevos.values());
+    let inicio = adentro(grafo.porId.get(grafo.inicio)) ? grafo.inicio : null;
+    if (!inicio) {
+      const entrada = nodos.find((n) => n.tipo === 'capitulo' && n.direccion === 'entra');
+      inicio = entrada ? entrada.id : nodos.length ? nodos[0].id : null;
+    }
+    return completar(Object.assign({}, grafo, { nodos, inicio, capituloVisto: capitulo }));
+  }
+
+  const Modelo = { Constructor, completar, agrupar, vistaCapitulo, unirCondiciones, conCondicion, sinRepetidas, colorPorNombre, COLOR_NARRADOR };
   raiz.Modelo = Modelo;
   if (typeof module !== 'undefined' && module.exports) module.exports = Modelo;
 })(typeof window !== 'undefined' ? window : globalThis);

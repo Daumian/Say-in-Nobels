@@ -39,6 +39,7 @@
     constructor(svg, opciones) {
       this.svg = svg;
       this.alSeleccionar = (opciones && opciones.alSeleccionar) || (() => {});
+      this.alIrCapitulo = opciones && opciones.alIrCapitulo;
       this.vista = { x: 40, y: 40, k: 1 };
       this.seleccion = null;
       this.completo = false; // false = texto recortado en una línea; true = texto completo
@@ -84,12 +85,13 @@
       this.elAristas = [];
 
       for (const n of grafo.nodos) {
-        const p = this.pos.get(n.id);
+        const repetidas = new Map();
         n.siguientes.forEach((s) => {
-          const q = this.pos.get(s.a);
-          if (!q) return;
-          const vuelve = res.atras.has(n.id + '>' + s.a) || (this.vertical ? q.y <= p.y : q.x <= p.x);
-          this._arista(n, s, p, q, vuelve);
+          const ruta = res.rutas.get(n.id + '>' + s.a);
+          if (!ruta) return;
+          const vez = repetidas.get(s.a) || 0;
+          repetidas.set(s.a, vez + 1);
+          this._arista(n, s, ruta, vez);
         });
       }
       for (const n of grafo.nodos) {
@@ -100,7 +102,8 @@
         caja.addEventListener('click', (ev) => {
           if (this._arrastro) return;
           ev.stopPropagation();
-          this.seleccionar(n.id, false);
+          if (n.tipo === 'capitulo' && this.alIrCapitulo) this.alIrCapitulo(n.destino);
+          else this.seleccionar(n.id, false);
         });
         this.elNodos.set(n.id, caja);
       }
@@ -109,50 +112,41 @@
       this._marcarSeleccion();
     }
 
-    _arista(origen, s, p, q, vuelve) {
-      if (this.vertical) return this._aristaVertical(origen, s, p, q, vuelve);
-      const x1 = p.x + p.w;
-      const y1 = p.y + Math.min(p.h / 2, 36);
-      const x2 = q.x;
-      const y2 = q.y + Math.min(q.h / 2, 36);
-      let d;
-      let medio;
-      if (!vuelve) {
-        const dx = Math.max(30, (x2 - x1) / 2);
-        d = `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`;
-        medio = { x: (x1 + x2) / 2, y: (y1 + y2) / 2 };
-      } else {
-        // Vuelve para atrás: un arco por arriba
-        const arriba = Math.min(p.y, q.y) - 34;
-        d = `M${x1},${y1} C${x1 + 60},${y1} ${x1 + 60},${arriba} ${x1},${arriba} L${x2},${arriba} C${x2 - 60},${arriba} ${x2 - 60},${y2} ${x2},${y2}`;
-        medio = { x: (x1 + x2) / 2, y: arriba };
+    /** Dibuja una flecha suave que pasa por todos los puntos del recorrido. */
+    _arista(origen, s, ruta, vez) {
+      const pts = ruta.puntos;
+      let d = `M${pts[0].x},${pts[0].y}`;
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1];
+        const b = pts[i];
+        if (this.vertical) {
+          const dy = (b.y - a.y) / 2;
+          d += ` C${a.x},${a.y + dy} ${b.x},${b.y - dy} ${b.x},${b.y}`;
+        } else {
+          const dx = (b.x - a.x) / 2;
+          d += ` C${a.x + dx},${a.y} ${b.x - dx},${b.y} ${b.x},${b.y}`;
+        }
       }
-      this._trazar(origen, s, d, medio, vuelve);
-    }
-
-    _aristaVertical(origen, s, p, q, vuelve) {
-      let d;
-      let medio;
-      if (!vuelve) {
-        // De abajo de una caja a arriba de la otra
-        const x1 = p.x + p.w / 2;
-        const y1 = p.y + p.h;
-        const x2 = q.x + q.w / 2;
-        const y2 = q.y;
-        const dy = Math.max(24, (y2 - y1) / 2);
-        d = `M${x1},${y1} C${x1},${y1 + dy} ${x2},${y2 - dy} ${x2},${y2}`;
-        medio = { x: (x1 + x2) / 2, y: (y1 + y2) / 2 };
-      } else {
-        // Vuelve para arriba: un arco por el costado derecho
-        const x1 = p.x + p.w;
-        const y1 = p.y + p.h / 2;
-        const x2 = q.x + q.w;
-        const y2 = q.y + q.h / 2;
-        const lado = Math.max(x1, x2) + 34;
-        d = `M${x1},${y1} C${lado},${y1} ${lado},${y1} ${lado},${y1 - 20} L${lado},${y2 + 20} C${lado},${y2} ${lado},${y2} ${x2},${y2}`;
-        medio = { x: lado, y: (y1 + y2) / 2 };
+      // El rótulo va en la mitad del recorrido
+      let total = 0;
+      const tramos = [];
+      for (let i = 1; i < pts.length; i++) {
+        const l = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+        tramos.push(l);
+        total += l;
       }
-      this._trazar(origen, s, d, medio, vuelve);
+      let falta = total / 2;
+      let medio = pts[0];
+      for (let i = 0; i < tramos.length; i++) {
+        if (falta <= tramos[i] || i === tramos.length - 1) {
+          const t = tramos[i] ? Math.min(1, falta / tramos[i]) : 0;
+          medio = { x: pts[i].x + (pts[i + 1].x - pts[i].x) * t, y: pts[i].y + (pts[i + 1].y - pts[i].y) * t };
+          break;
+        }
+        falta -= tramos[i];
+      }
+      medio = { x: medio.x, y: medio.y + vez * 22 };
+      this._trazar(origen, s, d, medio, ruta.vuelve);
     }
 
     _trazar(origen, s, d, medio, vuelve) {
@@ -178,6 +172,12 @@
 
       if (n.tipo === 'inicio') {
         div('inicio-texto', '▶ Inicio', caja);
+      } else if (n.tipo === 'capitulo') {
+        div('cuadro', '📖', caja);
+        const cuerpo = div('cuerpo', null, caja);
+        div('quien', n.direccion === 'sale' ? 'Sigue en el capítulo' : 'Viene del capítulo', cuerpo);
+        div('texto', n.texto, cuerpo);
+        div('ir-capitulo', 'Ir ➜', caja);
       } else if (n.tipo === 'opcion') {
         div('cuadro', '?', caja);
         const cuerpo = div('cuerpo', null, caja);
@@ -218,7 +218,7 @@
         if (n.extras.length) this._extras(n, cuerpo);
       }
 
-      if (!n.siguientes.length && n.tipo !== 'falta') {
+      if (!n.siguientes.length && n.tipo !== 'falta' && n.tipo !== 'capitulo') {
         const fin = div('fin', '🏁', caja);
         fin.title = 'Final';
       }
@@ -286,8 +286,9 @@
       if (!this.tam) return;
       const r = this.svg.getBoundingClientRect();
       const margen = 40;
-      const k = Math.min(1.1, Math.max(0.08, Math.min((r.width - margen * 2) / Math.max(1, this.tam.ancho), (r.height - margen * 2) / Math.max(1, this.tam.alto))));
-      this.vista = { k, x: (r.width - this.tam.ancho * k) / 2, y: Math.max(margen, (r.height - this.tam.alto * k) / 2) };
+      const arriba = 72; // lugar para el selector de capítulos
+      const k = Math.min(1.1, Math.max(0.08, Math.min((r.width - margen * 2) / Math.max(1, this.tam.ancho), (r.height - margen - arriba) / Math.max(1, this.tam.alto))));
+      this.vista = { k, x: (r.width - this.tam.ancho * k) / 2, y: Math.max(arriba, arriba + (r.height - margen - arriba - this.tam.alto * k) / 2) };
       this._aplicar();
     }
 
@@ -298,7 +299,7 @@
       const r = this.svg.getBoundingClientRect();
       const k = r.width < 600 ? 0.65 : 0.9;
       this.vista = this.vertical
-        ? { k, x: r.width / 2 - (p.x + p.w / 2) * k, y: 24 - p.y * k }
+        ? { k, x: r.width / 2 - (p.x + p.w / 2) * k, y: 72 - p.y * k }
         : { k, x: 24 - p.x * k, y: r.height / 2 - (p.y + p.h / 2) * k };
       this._aplicar();
     }

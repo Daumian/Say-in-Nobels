@@ -356,6 +356,7 @@
     const entradas = new Map();
     labels.forEach((l, i) => {
       const siguiente = i + 1 < labels.length ? [{ salto: labels[i + 1].nombre, linea: l.nodo.linea }] : [];
+      c.empezarCapitulo(l.global);
       entradas.set(l.nombre, compilarBloque(l.nodo.hijos, siguiente, { global: l.global, ultimoQuien: null }));
     });
 

@@ -342,9 +342,11 @@
     }
 
     // 5) Contenido de arriba, nudos y puntadas
+    c.empezarCapitulo('Comienzo');
     const entradaArriba = compilar(tejer(leerItems(arriba), 0, 0).sec, [], { nudo: '' });
     for (const nudo of nudos) {
       const ctx = { nudo: nudo.nombre };
+      c.empezarCapitulo(nudo.nombre);
       for (const p of nudo.puntadas) entradas.set(nudo.nombre + '.' + p.nombre, compilar(tejer(leerItems(p.lineas), 0, 0).sec, [], { nudo: nudo.nombre, puntada: p.nombre }));
       const propias = compilar(tejer(leerItems(nudo.lineas), 0, 0).sec, [], ctx);
       entradas.set(nudo.nombre, nudo.lineas.length || !nudo.puntadas.length ? propias : [{ salto: nudo.nombre + '.' + nudo.puntadas[0].nombre }]);

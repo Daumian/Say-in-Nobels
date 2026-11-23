@@ -16,7 +16,8 @@
   const { icono, nombreExtra } = window.NubeExtras;
 
   const NOMBRE_FORMATO = { renpy: "Ren'Py", ink: 'Ink' };
-  const TIPOS = { inicio: 'Inicio', dialogo: 'Diálogo', opcion: 'Elección', accion: 'Acción', bloque: 'Bloque de diálogo', falta: 'Salto roto' };
+  const TODOS = '__todos__';
+  const TIPOS = { capitulo: 'Capítulo', inicio: 'Inicio', dialogo: 'Diálogo', opcion: 'Elección', accion: 'Acción', bloque: 'Bloque de diálogo', falta: 'Salto roto' };
 
   // Guardado local (si el navegador no deja, seguimos igual)
   const guardar = (k, v) => {
@@ -26,11 +27,12 @@
     try { return localStorage.getItem('nube.' + k); } catch (e) { return null; }
   };
 
-  const nube = new window.Nube($('#nube'), { alSeleccionar: mostrarDetalle });
+  const nube = new window.Nube($('#nube'), { alSeleccionar: mostrarDetalle, alIrCapitulo: irACapitulo });
   let grafoBase = null;
   let grafo = null;
   let primeraVez = true;
   let archivo = null; // { nombre, formato }
+  let capitulo = null; // capítulo que se muestra (TODOS = toda la historia)
 
   // ------------------------------------------------------------ generar
 
@@ -48,7 +50,14 @@
       mostrarAvisos([{ linea: null, mensaje: 'No pudimos leer el texto: ' + e.message, error: true }]);
       return;
     }
-    grafo = chkAgrupar.checked ? window.Modelo.agrupar(grafoBase) : grafoBase;
+    const caps = grafoBase.capitulos;
+    if (capitulo !== TODOS && !caps.includes(capitulo)) {
+      const inicio = grafoBase.porId.get(grafoBase.inicio);
+      capitulo = inicio && caps.includes(inicio.capitulo) ? inicio.capitulo : caps[0] || TODOS;
+    }
+    const vista = capitulo === TODOS || caps.length <= 1 ? grafoBase : window.Modelo.vistaCapitulo(grafoBase, capitulo);
+    grafo = chkAgrupar.checked ? window.Modelo.agrupar(vista) : vista;
+    mostrarCapitulos();
     nube.dibujar(grafo);
     mostrarAvisos(grafoBase.avisos);
     mostrarEstado();
@@ -63,16 +72,61 @@
     else cerrarDetalle();
   }
 
+  // ------------------------------------------------------------ capítulos
+
+  const selCapitulo = $('#cap-selector');
+
+  function mostrarCapitulos() {
+    const caps = grafoBase.capitulos;
+    $('#capitulos').hidden = caps.length <= 1;
+    selCapitulo.textContent = '';
+    const todos = document.createElement('option');
+    todos.value = TODOS;
+    todos.textContent = '📚 Toda la historia (' + caps.length + ' capítulos)';
+    selCapitulo.appendChild(todos);
+    caps.forEach((c, i) => {
+      const o = document.createElement('option');
+      o.value = c;
+      const cuantos = grafoBase.nodos.filter((n) => n.capitulo === c && n.tipo !== 'inicio').length;
+      o.textContent = '📖 ' + (i + 1) + '/' + caps.length + ' · ' + c + ' (' + cuantos + ')';
+      selCapitulo.appendChild(o);
+    });
+    selCapitulo.value = capitulo;
+    const i = caps.indexOf(capitulo);
+    $('#cap-anterior').disabled = capitulo !== TODOS && i <= 0;
+    $('#cap-siguiente').disabled = capitulo !== TODOS && i >= caps.length - 1;
+  }
+
+  function irACapitulo(c) {
+    if (!grafoBase || (c !== TODOS && !grafoBase.capitulos.includes(c))) return;
+    capitulo = c;
+    nube.seleccion = null;
+    generar(true);
+  }
+
+  function moverCapitulo(paso) {
+    const caps = grafoBase ? grafoBase.capitulos : [];
+    if (caps.length <= 1) return;
+    const i = capitulo === TODOS ? (paso > 0 ? -1 : caps.length) : caps.indexOf(capitulo);
+    const j = i + paso;
+    if (j >= 0 && j < caps.length) irACapitulo(caps[j]);
+  }
+
+  selCapitulo.addEventListener('change', () => irACapitulo(selCapitulo.value));
+  $('#cap-anterior').addEventListener('click', () => moverCapitulo(-1));
+  $('#cap-siguiente').addEventListener('click', () => moverCapitulo(1));
+
   function mostrarEstado() {
     const base = grafoBase.nodos;
     const lineas = base.filter((n) => n.tipo === 'dialogo').length;
     const opciones = base.filter((n) => n.tipo === 'opcion').length;
-    const finales = grafo.nodos.filter((n) => !n.siguientes.length && n.tipo !== 'falta').length;
+    const finales = base.filter((n) => !n.siguientes.length && n.tipo !== 'falta').length;
     const partes = [
       ['💬', lineas, lineas === 1 ? 'línea' : 'líneas'],
       ['🔀', opciones, opciones === 1 ? 'opción' : 'opciones'],
       ['🏁', finales, finales === 1 ? 'final' : 'finales'],
       ['🎭', grafoBase.personajes.length, grafoBase.personajes.length === 1 ? 'personaje' : 'personajes'],
+      ['📖', grafoBase.capitulos.length, grafoBase.capitulos.length === 1 ? 'capítulo' : 'capítulos'],
     ];
     const estado = $('#estado');
     estado.textContent = '';
@@ -104,6 +158,7 @@
   function resumen(n) {
     if (!n) return '';
     if (n.tipo === 'inicio') return '▶ Inicio';
+    if (n.tipo === 'capitulo') return '📖 Capítulo ' + n.texto;
     if (n.tipo === 'opcion') return '🔀 ' + n.texto;
     if (n.tipo === 'accion') return '⚙ ' + n.extras.map((e) => e.valor).join(', ');
     if (n.tipo === 'bloque') return (n.lineas[0].personaje ? n.lineas[0].personaje + ': ' : '') + n.lineas[0].texto;
@@ -125,7 +180,7 @@
       em.textContent = condicion;
       b.appendChild(em);
     }
-    b.addEventListener('click', () => nube.seleccionar(n.id, true));
+    b.addEventListener('click', () => (n.tipo === 'capitulo' ? irACapitulo(n.destino) : nube.seleccionar(n.id, true)));
     return b;
   }
 
@@ -150,7 +205,7 @@
     const h2 = document.createElement('h2');
     h2.textContent = n.tipo === 'dialogo' ? n.personaje || 'Narrador' : TIPOS[n.tipo];
     const small = document.createElement('small');
-    small.textContent = TIPOS[n.tipo] + (n.linea ? ' · línea ' + n.linea : '');
+    small.textContent = TIPOS[n.tipo] + (n.capitulo ? ' · 📖 ' + n.capitulo : '') + (n.linea ? ' · línea ' + n.linea : '');
     titulos.append(h2, small);
     const cerrar = document.createElement('button');
     cerrar.className = 'cerrar';
@@ -331,6 +386,7 @@
     $('#nombre-archivo').textContent = nombre;
     $('#formato-archivo').textContent = NOMBRE_FORMATO[archivo.formato];
     texto.value = contenido;
+    capitulo = null;
     guardar('archivo', JSON.stringify({ nombre, extension }));
     guardar('texto', contenido);
     nube.seleccion = null;
@@ -456,8 +512,10 @@
   $('#zoom-inicio').addEventListener('click', () => nube.alInicio());
 
   document.addEventListener('keydown', (ev) => {
-    if (ev.target === texto || $('#visor').hidden) return;
+    if (ev.target === texto || ev.target === selCapitulo || $('#visor').hidden) return;
     if (ev.key === 'Escape') nube.seleccionar(null);
+    if (ev.key === 'ArrowLeft' || ev.key === '[') moverCapitulo(-1);
+    if (ev.key === 'ArrowRight' || ev.key === ']') moverCapitulo(1);
     if (ev.key === '+' || ev.key === '=') nube.zoom(1.2);
     if (ev.key === '-') nube.zoom(1 / 1.2);
     if (ev.key === '0') nube.ajustar();
