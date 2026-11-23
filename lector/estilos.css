@@ -232,6 +232,7 @@ body.soltando::after {
 .boton[aria-pressed="true"] { background: var(--acento-suave); border-color: var(--acento); }
 .interruptor { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; color: var(--texto-suave); }
 .interruptor input { accent-color: var(--acento); width: 16px; height: 16px; }
+.interruptor.destacado { height: 32px; padding: 0 10px; border: 1px solid var(--acento); border-radius: 8px; background: var(--acento-suave); color: var(--texto); font-weight: 600; }
 
 /* ================================================================ paneles */
 .principal { flex: 1; display: flex; min-height: 0; position: relative; }
@@ -525,8 +526,7 @@ body.soltando::after {
 @media (max-width: 860px) {
   .barra { padding: 8px 16px; }
   .marca p { display: none; }
-  .boton span, .interruptor span { display: none; }
-  .interruptor::after { content: "Agrupar"; }
+  .boton span { display: none; }
   .panel-editor {
     position: absolute;
     inset: 0 auto 0 0;

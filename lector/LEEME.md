@@ -8,10 +8,12 @@ Las flechas muestran si el camino sigue derecho o si hay **elecciones**.
 
 Abrí `index.html` en el navegador (doble clic, no hace falta servidor) y:
 
-- Pegá un guion en el panel **Texto**, abrí un `.rpy` / `.ink` con **📂 Abrir**, o elegí un **📚 Ejemplo**.
+- En la portada tocá **📂 Abrir diálogo** o arrastrá el archivo a la página. Solo se aceptan `.rpy`
+  (se lee como Ren'Py) y `.ink` (se lee como Ink). También hay ejemplos para probar.
+- **✂️ Truncar texto**: prendido, cada texto va en una sola línea; apagado, el texto completo baja en columna.
 - **Arrastrá** para moverte, usá la **rueda** o pellizcá para hacer zoom.
 - **Hacé clic en un nodo** para ver todo su detalle y saltar a la línea del texto.
-- **Agrupar diálogos seguidos** junta las líneas sin elecciones en un solo bloque.
+- **📦 Agrupar diálogos** junta las líneas sin elecciones en un solo bloque.
 
 ## Qué significa cada cosa
 

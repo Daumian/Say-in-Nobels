@@ -39,9 +39,11 @@
       <div class="acciones">
         <button id="btn-editor" class="boton" type="button" aria-pressed="true" title="Mostrar u ocultar el texto">📝 <span>Texto</span></button>
         <button id="btn-abrir-otro" class="boton" type="button" title="Abrir otro .rpy o .ink">📂 <span>Abrir otro</span></button>
-        <button id="btn-recortar" class="boton" type="button" aria-pressed="true" title="Recortar: cada texto en una sola línea. Apagado: el texto completo baja en columna.">✂️ <span>Recortar texto</span></button>
+        <label class="interruptor destacado" title="Prendido: cada texto en una sola línea, cortado con «…». Apagado: el texto completo baja en columna.">
+          <input id="truncar" type="checkbox" checked> <span>✂️ Truncar texto</span>
+        </label>
         <label class="interruptor" title="Junta las líneas seguidas sin elecciones en un solo nodo">
-          <input id="agrupar" type="checkbox"> <span>Agrupar diálogos seguidos</span>
+          <input id="agrupar" type="checkbox"> <span>📦 Agrupar diálogos</span>
         </label>
       </div>
     </header>

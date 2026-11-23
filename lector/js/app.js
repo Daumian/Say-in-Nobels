@@ -7,7 +7,7 @@
   const $ = (s) => document.querySelector(s);
   const texto = $('#texto');
   const chkAgrupar = $('#agrupar');
-  const btnRecortar = $('#btn-recortar');
+  const chkTruncar = $('#truncar');
   const editor = $('#editor');
   const btnEditor = $('#btn-editor');
   const detalle = $('#detalle');
@@ -423,13 +423,14 @@
     generar(true);
   });
 
-  function ponerRecorte(recortar) {
-    btnRecortar.setAttribute('aria-pressed', String(recortar));
-    nube.completo = !recortar;
-    guardar('recortar', recortar ? '1' : '0');
+  // Truncar: prendido = cada texto en una línea; apagado = texto completo en columna
+  function ponerTruncado(truncar) {
+    chkTruncar.checked = truncar;
+    nube.completo = !truncar;
+    guardar('truncar', truncar ? '1' : '0');
   }
-  btnRecortar.addEventListener('click', () => {
-    ponerRecorte(btnRecortar.getAttribute('aria-pressed') !== 'true');
+  chkTruncar.addEventListener('change', () => {
+    ponerTruncado(chkTruncar.checked);
     generar(false);
   });
 
@@ -449,7 +450,7 @@
   // ------------------------------------------------------------- arranque
 
   chkAgrupar.checked = recuperar('agrupar') === '1';
-  ponerRecorte(recuperar('recortar') !== '0');
+  ponerTruncado(recuperar('truncar') !== '0');
   const angosta = window.matchMedia('(max-width: 860px)').matches;
   mostrarEditor(recuperar('editor') ? recuperar('editor') === '1' : !angosta);
   mostrarPortada();
