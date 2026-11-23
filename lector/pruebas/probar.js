@@ -24,8 +24,8 @@ const textos = (g) => g.nodos.map((n) => n.texto);
 const porTexto = (g, t) => g.nodos.find((n) => n.texto.startsWith(t));
 const siguientesDe = (g, n) => n.siguientes.map((s) => g.porId.get(s.a));
 
-function sinSuperposiciones(g) {
-  const { pos } = ubicar(g, { ancho: 260, altoDe: () => 80, sepX: 70, sepY: 20 });
+function sinSuperposiciones(g, vertical) {
+  const { pos } = ubicar(g, { ancho: 260, altoDe: (n) => (n.tipo === 'opcion' ? 54 : 80), sepX: 70, sepY: 20, vertical });
   const cajas = Array.from(pos.values());
   for (let i = 0; i < cajas.length; i++)
     for (let j = i + 1; j < cajas.length; j++) {
@@ -61,8 +61,19 @@ for (const [nombre, g] of [
     assert(q.anteriores.length >= 3);
   });
   prueba(nombre + ': nada encimado (con y sin agrupar)', () => {
-    sinSuperposiciones(g);
-    sinSuperposiciones(Modelo.agrupar(g));
+    for (const vertical of [false, true]) {
+      sinSuperposiciones(g, vertical);
+      sinSuperposiciones(Modelo.agrupar(g), vertical);
+      for (const c of g.capitulos) sinSuperposiciones(Modelo.vistaCapitulo(g, c), vertical);
+    }
+  });
+  prueba(nombre + ': cada capítulo muestra solo lo suyo y flechas a los otros', () => {
+    assert.strictEqual(g.capitulos.length, 5);
+    for (const c of g.capitulos) {
+      const v = Modelo.vistaCapitulo(g, c);
+      for (const n of v.nodos) assert(n.capitulo === c, 'nodo de otro capítulo');
+      for (const n of v.nodos) for (const s of n.siguientes) assert(v.porId.has(s.a), 'flecha suelta');
+    }
   });
 }
 

@@ -13,6 +13,8 @@ Abrí `index.html` en el navegador (doble clic, no hace falta servidor) y:
 - **Truncar** cambia la dirección de la nube: **➡️ Horizontal** (la historia avanza a la derecha) o
   **⬇️ Vertical** (la historia baja y las elecciones se abren hacia los costados).
 - **📜 Texto completo** muestra el texto entero de cada nodo en vez de cortarlo con «…».
+- **📖 Capítulos**: se ve un capítulo a la vez (cada `label` de Ren'Py o nudo `===` de Ink). Se cambia con
+  ◀ ▶, con el selector o con las flechas ← → del teclado. Las cajas punteadas llevan al capítulo vecino.
 - **Arrastrá** para moverte, usá la **rueda** o pellizcá para hacer zoom.
 - **Hacé clic en un nodo** para ver todo su detalle y saltar a la línea del texto.
 - **📦 Agrupar diálogos** junta las líneas sin elecciones en un solo bloque.
@@ -32,7 +34,7 @@ Abrí `index.html` en el navegador (doble clic, no hace falta servidor) y:
 
 - `js/modelo.js` — el "molde" de los nodos.
 - `js/lector-renpy.js` y `js/lector-ink.js` — convierten el texto en nodos.
-- `js/ubicar.js` — decide dónde va cada nodo.
+- `js/ubicar.js` — decide dónde va cada nodo (acomodo por capas: se ensancha y se achica solo).
 - `js/nube.js` — dibuja la nube, el zoom y la selección.
 - `js/app.js` — une todo con la página.
 - `js/ejemplos.js` — se genera con `node herramientas/generar-ejemplos.js`.
